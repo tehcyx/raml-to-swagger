@@ -37,6 +37,20 @@ exports.convert = function (raml) {
     return result;
   });
 
+  // Fix for inner schemas within definitions, that are declared with $schema
+  _.each(jp.nodes(swagger.definitions, '$..*["$schema"]'), function(innerSchema) {
+    var parent = jp.value(swagger.definitions, jp.stringify(_.dropRight(_.dropRight(innerSchema.path))));
+
+    var copySchema = _.cloneDeep(parent.items);
+    delete copySchema['$schema'];
+    delete parent['items'];
+    parent['items'] = {};
+    parent['items']['$ref'] = '#/definitions/' + copySchema.title;
+
+    swagger.definitions[copySchema.title] = {};
+    swagger.definitions[copySchema.title] = copySchema;
+  });
+
   if ('mediaType' in raml) {
     swagger.consumes = [raml.mediaType];
     swagger.produces = [raml.mediaType];
@@ -456,6 +470,28 @@ function convertSchema(schema) {
     if (parent['type'] === 'array') {
       parent[name] = {type: 'array', items: result.value[0]}
       delete parent['type'];
+    }
+  });
+
+  // Fix use of 'oneOf' properties, and make it type object
+  _.each(jp.nodes(schema, '$..oneOf'), function(result) {
+    var oneOfProp = 'oneOf';
+    var name = _.last(result.path);
+    var parent = jp.value(schema, jp.stringify(_.dropRight(result.path)));
+
+    if (typeof parent[oneOfProp] === 'object') {
+        parent['type'] = 'object';
+        delete parent[oneOfProp];
+    }
+  });
+
+  // Fix empty 'required' array
+  _.each(jp.nodes(schema, '$..required'), function(result) {
+    var name = _.last(result.path);
+    var parent = jp.value(schema, jp.stringify(_.dropRight(result.path)));
+
+    if (parent[name] instanceof Array && parent[name].length == 0) {
+      delete parent[name];
     }
   });
 
