@@ -7,6 +7,8 @@ var jsonCompat = require('json-schema-compatibility');
 var HttpStatus = require('http-status-codes').getStatusText;
 var jp = require('jsonpath');
 
+var seqNo = 1;
+
 exports.convert = function (raml) {
   //FIXME:
   //console.log(raml.documentation);
@@ -41,14 +43,18 @@ exports.convert = function (raml) {
   _.each(jp.nodes(swagger.definitions, '$..*["$schema"]'), function(innerSchema) {
     var parent = jp.value(swagger.definitions, jp.stringify(_.dropRight(_.dropRight(innerSchema.path))));
 
-    var copySchema = _.cloneDeep(parent.items);
-    delete copySchema['$schema'];
-    delete parent['items'];
-    parent['items'] = {};
-    parent['items']['$ref'] = '#/definitions/' + copySchema.title;
-
-    swagger.definitions[copySchema.title] = {};
-    swagger.definitions[copySchema.title] = copySchema;
+    if (!(typeof parent === 'undefined') && !(typeof parent.items === 'undefined')) {
+      var copySchema = _.cloneDeep(parent.items);
+      delete copySchema['$schema'];
+      delete parent['items'];
+      parent['items'] = {};
+      if (typeof copySchema.title === 'undefined') {
+        copySchema.title = camelize('no name given' + seqNo++);
+      }
+      parent['items']['$ref'] = '#/definitions/' + camelize(copySchema.title);
+      swagger.definitions[copySchema.title] = {};
+      swagger.definitions[copySchema.title] = copySchema;
+    }
   });
 
   if ('mediaType' in raml) {
@@ -313,7 +319,8 @@ function parseParametersList(params, inValue) {
        srParameter = {
          type: 'array',
          items: srParameter,
-         collectionFormat: 'multi'
+         // collectionFormat: 'multi' not supported for headers, use csv instead
+         collectionFormat: 'csv'
        }
      }
 
@@ -384,6 +391,8 @@ function convertSchema(schema) {
     // fix internal $ref with http schema
     if (ref.match(/^http([s]?):\/\/.*/))
       return ref;
+    else if (ref.match(/^#\/definitions\//))
+      return ref;
     return '#/definitions/' + ref;
   });
 
@@ -447,6 +456,15 @@ function convertSchema(schema) {
       default:
         assert(false);
     }
+  });
+
+  // Fix for adding additionalProperties to objects
+  _.each(jp.nodes(schema, '$..*["additionalProperties"]'), function(result) {
+    var value = result.value;
+    var path = result.path;
+
+    var parent = jp.value(schema, jp.stringify(_.dropRight(path)));
+    delete parent['additionalProperties'];
   });
 
   // Fix case when arrays definition wrapped with array, like that:
@@ -517,4 +535,10 @@ function convertSchema(schema) {
     unwrapItems(schema);
 
   return schema;
+}
+
+function camelize(str) {
+  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, function(letter, index) {
+    return index == 0 ? letter.toLowerCase() : letter.toUpperCase();
+  }).replace(/\s+/g, '');
 }
