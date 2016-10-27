@@ -37,6 +37,20 @@ exports.convert = function (raml) {
     return result;
   });
 
+  // Fix for inner schemas within definitions, that are declared with $schema
+  _.each(jp.nodes(swagger.definitions, '$..*["$schema"]'), function(innerSchema) {
+    var parent = jp.value(swagger.definitions, jp.stringify(_.dropRight(_.dropRight(innerSchema.path))));
+
+    var copySchema = _.cloneDeep(parent.items);
+    delete copySchema['$schema'];
+    delete parent['items'];
+    parent['items'] = {};
+    parent['items']['$ref'] = '#/definitions/' + copySchema.title;
+
+    swagger.definitions[copySchema.title] = {};
+    swagger.definitions[copySchema.title] = copySchema;
+  });
+
   if ('mediaType' in raml) {
     swagger.consumes = [raml.mediaType];
     swagger.produces = [raml.mediaType];
