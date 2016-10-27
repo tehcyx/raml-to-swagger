@@ -431,6 +431,15 @@ function convertSchema(schema) {
     }
   });
 
+  // Fix for adding additionalProperties to objects
+  _.each(jp.nodes(schema, '$..*["additionalProperties"]'), function(result) {
+    var value = result.value;
+    var path = result.path;
+
+    var parent = jp.value(schema, jp.stringify(_.dropRight(path)));
+    delete parent['additionalProperties'];
+  });
+
   // Fix case when arrays definition wrapped with array, like that:
   // [{
   //   "type": "array",
