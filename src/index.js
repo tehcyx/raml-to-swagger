@@ -356,14 +356,22 @@ function parseBody(ramlBody, srMethod) {
   if (_.isUndefined(srMethod.parameters))
     srMethod.parameters = [];
 
-  srMethod.parameters.push({
-    //FIXME: check if name is used;
-    name: 'body',
-    in: 'body',
-    required: true,
-    //TODO: copy example
-    schema: convertSchema(_.get(ramlBody[jsonMIME], 'schema'))
-  });
+   //Fix for the body parameter - empty schema to be set to empty object
+   //Schema is mandatory for body parameter
+    var bodyRequest = {
+        //FIXME: check if name is used;
+        name: 'body',
+        in: 'body',
+        required: true,
+        //TODO: copy example
+        schema: convertSchema(_.get(ramlBody[jsonMIME], 'schema'))
+    };
+
+    if (!bodyRequest.schema) {
+        bodyRequest.schema = {type: "object"};
+    }
+
+    srMethod.parameters.push(bodyRequest);
 }
 
 function convertSchema(schema) {
