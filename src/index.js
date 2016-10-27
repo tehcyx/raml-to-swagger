@@ -459,6 +459,18 @@ function convertSchema(schema) {
     }
   });
 
+  // Fix use of 'oneOf' properties, and make it type object
+  _.each(jp.nodes(schema, '$..oneOf'), function(result) {
+    var oneOfProp = 'oneOf';
+    var name = _.last(result.path);
+    var parent = jp.value(schema, jp.stringify(_.dropRight(result.path)));
+
+    if (typeof parent[oneOfProp] === 'object') {
+      parent['type'] = 'object';
+      delete parent[oneOfProp];
+    }
+  });
+
   // Fix case then 'items' value is empty or single element array.
   function unwrapItems(schema) {
     if (_.isEmpty(schema.items))
