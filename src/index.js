@@ -366,6 +366,13 @@ function convertSchema(schema) {
 
   //Add '#/definitions/' prefix to all internal refs
   jp.apply(schema, '$..*["$ref"]' , function (ref) {
+    // fix internal $ref with http schema
+    if (ref.match(/^http([s]?):\/\/.*/)) {
+      return ref;
+    }
+    else if (ref.match(/^#\/definitions\//)) { // fix $ref that already has #/definitions/ inside
+      return ref;
+    }
     return '#/definitions/' + ref;
   });
 
