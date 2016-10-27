@@ -294,11 +294,12 @@ function parseParametersList(params, inValue) {
      }
 
      if (value.repeat === true) {
-       assert(['query', 'formData'].indexOf(inValue) !== -1);
+       //changes for multiple header support - added in header to the assert check
+       assert(['query', 'formData', 'header'].indexOf(inValue) !== -1);
        srParameter = {
          type: 'array',
          items: srParameter,
-         collectionFormat: 'multi'
+         collectionFormat: 'csv' // collectionFormat: 'multi' not supported for headers, use csv instead
        }
      }
 
