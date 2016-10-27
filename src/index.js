@@ -7,6 +7,8 @@ var jsonCompat = require('json-schema-compatibility');
 var HttpStatus = require('http-status-codes').getStatusText;
 var jp = require('jsonpath');
 
+var seqNo = 1;
+
 exports.convert = function (raml) {
   //FIXME:
   //console.log(raml.documentation);
@@ -41,14 +43,18 @@ exports.convert = function (raml) {
   _.each(jp.nodes(swagger.definitions, '$..*["$schema"]'), function(innerSchema) {
     var parent = jp.value(swagger.definitions, jp.stringify(_.dropRight(_.dropRight(innerSchema.path))));
 
-    var copySchema = _.cloneDeep(parent.items);
-    delete copySchema['$schema'];
-    delete parent['items'];
-    parent['items'] = {};
-    parent['items']['$ref'] = '#/definitions/' + copySchema.title;
-
-    swagger.definitions[copySchema.title] = {};
-    swagger.definitions[copySchema.title] = copySchema;
+    if (!(typeof parent === 'undefined') && !(typeof parent.items === 'undefined')) {
+      var copySchema = _.cloneDeep(parent.items);
+      delete copySchema['$schema'];
+      delete parent['items'];
+      parent['items'] = {};
+      if (typeof copySchema.title === 'undefined') {
+        copySchema.title = camelize('no name given' + seqNo++);
+      }
+      parent['items']['$ref'] = '#/definitions/' + camelize(copySchema.title);
+      swagger.definitions[copySchema.title] = {};
+      swagger.definitions[copySchema.title] = copySchema;
+    }
   });
 
   if ('mediaType' in raml) {
@@ -491,4 +497,10 @@ function convertSchema(schema) {
     unwrapItems(schema);
 
   return schema;
+}
+
+function camelize(str) {
+  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, function(letter, index) {
+    return index == 0 ? letter.toLowerCase() : letter.toUpperCase();
+  }).replace(/\s+/g, '');
 }
