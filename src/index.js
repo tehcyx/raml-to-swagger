@@ -475,6 +475,12 @@ function convertSchema(schema) {
     delete parent['additionalProperties'];
   });
   
+  //Fix for definitions present in schema, renaming it to x-defintions
+    if (schema.definitions) {
+        schema["x-definitions"] = schema.definitions;
+        delete schema.definitions;
+    }
+  
     //Fix for $schema in items -- Removing $schema from items
     _.each(jp.nodes(schema, '$..properties[?(@.type === "array")]'), function (result) {
         var value = result.value;
