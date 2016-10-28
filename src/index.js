@@ -56,6 +56,13 @@ exports.convert = function (raml) {
       swagger.definitions[copySchema.title] = copySchema;
     }
   });
+  
+  //Fix to add the inner definitions present in the schema into parent definitions
+  _.each(jp.nodes(swagger, '$..*["x-definitions"]'), function (innerSchema) {
+        _.each(innerSchema.value, function (schema, name) {
+            swagger.definitions[name] = schema;
+        });
+    });
 
   if ('mediaType' in raml) {
     swagger.consumes = [raml.mediaType];
