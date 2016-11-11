@@ -431,6 +431,12 @@ function convertSchema(schema) {
     }
   });
 
+  //Fix for definitions present in schema, renaming it to x-defintions
+  if (schema.definitions) {
+    schema["x-definitions"] = schema.definitions;
+    delete schema.definitions;
+  }
+
   // Fix case when arrays definition wrapped with array, like that:
   // [{
   //   "type": "array",
